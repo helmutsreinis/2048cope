@@ -6,6 +6,11 @@
   position: relative;
   min-height: 100vh;
   width: 100%;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .game-header {
@@ -67,7 +72,6 @@
   width: 100%;
   height: auto;
   margin-bottom: 20px;
-  touch-action: none;
 }
 
 .game-instructions {
@@ -268,4 +272,69 @@
   100% {
     opacity: 1;
   }
+}
+
+/* Improvements for mobile experience */
+@media (max-width: 768px) {
+  .game-container {
+    padding: 10px;
+  }
+  
+  .game-header {
+    margin-bottom: 10px;
+  }
+  
+  .game-header h1 {
+    font-size: 20px;
+  }
+  
+  .scores {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .game-board-2d {
+    margin: 15px auto;
+    width: calc(100vw - 30px);
+    max-width: 400px;
+    height: calc(100vw - 30px);
+    max-height: 400px;
+  }
+  
+  .game-instructions {
+    margin-top: 10px;
+    font-size: 14px;
+  }
+  
+  .chat-stream {
+    width: calc(100vw - 30px);
+    max-width: 450px;
+  }
+}
+
+/* Indicator for swipe gestures (to help users understand touch is supported) */
+.swipe-indicator {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.game-container.touch-device .swipe-indicator {
+  opacity: 1;
+  animation: fade-out 3s forwards 1s;
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
 } 

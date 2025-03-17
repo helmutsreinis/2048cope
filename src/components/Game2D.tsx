@@ -4,6 +4,7 @@ import Grid2D from './Grid2D';
 import ScoreDisplay from './ScoreDisplay';
 import Controls from './Controls';
 import ChatStream from './ChatStream';
+import useSwipeGesture from '../hooks/useSwipeGesture';
 import { getRandomMessage } from '../utils/chatMessages';
 import { getBackgroundForScore, preloadBackgroundImages, generateFallbackBackground } from '../utils/backgroundManager';
 import '../styles/Game2D.css';
@@ -33,7 +34,9 @@ const Game2D = () => {
   const [levelUpVisible, setLevelUpVisible] = useState(false);
   const [randomDeathMessage, setRandomDeathMessage] = useState("");
   const [showRandomDeath, setShowRandomDeath] = useState(false);
+  const gameContainerRef = useRef(null);
   const prevBackgroundRef = useRef(null);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
   
   // Add a new chat message - defined early so it can be used by other functions
   const addChatMessage = useCallback((message) => {
@@ -140,7 +143,7 @@ const Game2D = () => {
   
   // Check for random death on each merge (1% chance)
   const checkRandomDeath = useCallback(() => {
-    if (Math.random() < 0.005) { // 1% chance
+    if (Math.random() < 0.01) { // 1% chance
       const randomMessage = RANDOM_DEATH_MESSAGES[Math.floor(Math.random() * RANDOM_DEATH_MESSAGES.length)];
       setRandomDeathMessage(randomMessage);
       setShowRandomDeath(true);
@@ -331,6 +334,26 @@ const Game2D = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameState, move]);
   
+  // Set up swipe gesture support for mobile
+  useSwipeGesture(
+    gameContainerRef,
+    {
+      onSwipeUp: () => {
+        if (gameState === 'ready') move('up');
+      },
+      onSwipeDown: () => {
+        if (gameState === 'ready') move('down');
+      },
+      onSwipeLeft: () => {
+        if (gameState === 'ready') move('left');
+      },
+      onSwipeRight: () => {
+        if (gameState === 'ready') move('right');
+      }
+    },
+    50 // Swipe threshold in pixels
+  );
+  
   // Clear chat messages every 10 seconds
   useEffect(() => {
     const chatClearInterval = setInterval(() => {
@@ -388,9 +411,40 @@ const Game2D = () => {
       background: currentBackground.color
     };
   };
+  
+  // Add meta viewport tag for better mobile experience
+  useEffect(() => {
+    // Add viewport meta tag for better mobile display if it doesn't exist
+    if (!document.querySelector('meta[name="viewport"]')) {
+      const meta = document.createElement('meta');
+      meta.name = 'viewport';
+      meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+      document.getElementsByTagName('head')[0].appendChild(meta);
+    }
+    
+    // Detect if this is a touch device
+    const detectTouchDevice = () => {
+      setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    };
+    
+    detectTouchDevice();
+    
+    // Prevent page scrolling when playing on mobile
+    const preventScrolling = (e) => {
+      if (e.target.closest('.game-container')) {
+        e.preventDefault();
+      }
+    };
+    
+    document.addEventListener('touchmove', preventScrolling, { passive: false });
+    
+    return () => {
+      document.removeEventListener('touchmove', preventScrolling);
+    };
+  }, []);
 
   return (
-    <div className="game-container">
+    <div className={`game-container ${isTouchDevice ? 'touch-device' : ''}`} ref={gameContainerRef}>
       {/* Dynamic background */}
       <div className="game-background" style={getBackgroundStyle()} />
       
@@ -398,6 +452,9 @@ const Game2D = () => {
       <div className={`level-indicator ${levelUpVisible ? 'show' : ''}`}>
         {currentBackground && `PROMOTED TO ${currentBackground.name.toUpperCase()}!`}
       </div>
+      
+      {/* Swipe indicator for mobile */}
+      <div className="swipe-indicator">Swipe to move tiles</div>
       
       {/* Random death overlay */}
       {showRandomDeath && (
@@ -440,7 +497,7 @@ const Game2D = () => {
       </div>
       
       <div className="game-instructions">
-        <p>Use arrow keys to move the tiles. When two tiles with the same number touch, they merge into the next shift!</p>
+        <p>Use arrow keys or swipe to move the tiles. When two tiles with the same number touch, they merge into the next shift!</p>
       </div>
 
       <ChatStream messages={chatMessages} />
