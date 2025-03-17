@@ -1,0 +1,77 @@
+.texture-manager {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.texture-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-actions {
+  margin-top: 10px;
+}
+
+.texture-manager button {
+  background-color: #8f7a66;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.texture-manager button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.texture-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.texture-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background-color: white;
+  padding: 10px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.texture-value {
+  font-weight: bold;
+}
+
+.texture-thumbnail {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.remove-texture {
+  background-color: #e74c3c !important;
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.clear-textures {
+  background-color: #e74c3c !important;
+  margin-top: 15px;
+} 

@@ -1,0 +1,200 @@
+.game-container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif;
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.game-header h1 {
+  font-size: 36px;
+  font-weight: bold;
+  margin: 0;
+  color: #776e65;
+  line-height: 1.2;
+}
+
+.title {
+  flex: 1;
+  min-width: 200px;
+  margin-bottom: 10px;
+}
+
+.scores {
+  display: flex;
+  gap: 10px;
+}
+
+.game-controls {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.new-game-btn {
+  background-color: #8f7a66;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  padding: 10px 20px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.new-game-btn:hover {
+  background-color: #9f8b76;
+}
+
+.game-state-indicator {
+  font-size: 14px;
+  color: #776e65;
+  font-weight: bold;
+}
+
+.game-board-2d {
+  width: 100%;
+  height: auto;
+  margin-bottom: 20px;
+  touch-action: none;
+}
+
+.game-instructions {
+  margin-top: 20px;
+  text-align: center;
+  color: #776e65;
+}
+
+.game-over {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(238, 228, 218, 0.73);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fade-in 800ms ease;
+  border-radius: var(--grid-radius);
+}
+
+.game-over h2 {
+  font-size: 48px;
+  font-weight: bold;
+  color: #776e65;
+  margin-bottom: 20px;
+}
+
+.game-over button {
+  background-color: #8f7a66;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  padding: 10px 20px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.texture-generator-controls {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.texture-generator-controls button,
+.dev-tools button {
+  background-color: #8f7a66;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  padding: 8px 16px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.dev-tools {
+  margin-top: 20px;
+  text-align: center;
+  padding: 10px;
+  border-top: 1px solid #eee;
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@media screen and (max-width: 520px) {
+  .game-container {
+    padding: 15px;
+  }
+  
+  .game-header h1 {
+    font-size: 36px;
+  }
+}
+
+/* Add styles for dynamic background */
+.game-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: all 1s ease-in-out;
+  z-index: -10; /* Lower z-index to ensure it's behind everything */
+  opacity: 0.85; /* Slightly transparent to not overwhelm the game */
+}
+
+.level-indicator {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  opacity: 0;
+}
+
+.level-indicator.show {
+  opacity: 1;
+}
+
+/* Add a dark overlay to ensure game elements remain visible regardless of bg */
+.game-container::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: -9; /* One level above the background */
+} 

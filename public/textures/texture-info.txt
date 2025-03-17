@@ -1,0 +1,32 @@
+This directory contains embedded textures for the game.
+
+IMPORTANT: Make sure the textures are placed directly in this directory (public/textures/), not in any subdirectories.
+
+The textures should follow this naming pattern:
+- tile-2.png
+- tile-4.png
+- tile-8.png
+- tile-16.png
+- tile-32.png
+- tile-64.png
+- tile-128.png
+- tile-256.png
+- tile-512.png
+- tile-1024.png
+- tile-2048.png
+- tile-4096.png
+
+You can generate these textures using the src/utils/generateTextures.js script if you have Node.js installed with the 'canvas' package:
+
+```bash
+npm install canvas
+node src/utils/generateTextures.js
+```
+
+If textures are missing, the game will fall back to using the default colors.
+
+Troubleshooting:
+- If textures aren't loading, check the browser console for error messages
+- Ensure image file names match exactly (case-sensitive)
+- Try restarting the development server after adding new textures
+- Make sure the image files are valid PNG files 

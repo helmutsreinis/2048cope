@@ -1,0 +1,20 @@
+diff --git a/node_modules/@react-three/drei/core/SpotLight.js b/node_modules/@react-three/drei/core/SpotLight.js
+index 403e617..1a4fa44 100644
+--- a/node_modules/@react-three/drei/core/SpotLight.js
++++ b/node_modules/@react-three/drei/core/SpotLight.js
+@@ -1,6 +1,6 @@
+ import _extends from '@babel/runtime/helpers/esm/extends';
+ import * as React from 'react';
+-import { Vector3, CylinderGeometry, Matrix4, WebGLRenderTarget, RGBAFormat, LinearEncoding, ShaderMaterial, DoubleSide, RepeatWrapping } from 'three';
++import { Vector3, CylinderGeometry, Matrix4, WebGLRenderTarget, RGBAFormat, ShaderMaterial, DoubleSide, RepeatWrapping } from 'three';
+ import { useThree, useFrame } from '@react-three/fiber';
+ import { FullScreenQuad } from 'three-stdlib';
+ import mergeRefs from 'react-merge-refs';
+@@ -98,7 +98,6 @@ function SpotlightShadowWithShader({
+   useCommon(spotlight, mesh, width, height, distance);
+   const renderTarget = React.useMemo(() => new WebGLRenderTarget(width, height, {
+     format: RGBAFormat,
+-    encoding: LinearEncoding,
+     stencilBuffer: false // depthTexture: null!
+ 
+   }), [width, height]);
