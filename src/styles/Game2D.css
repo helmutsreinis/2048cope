@@ -197,4 +197,75 @@
   background: rgba(0, 0, 0, 0.4);
   pointer-events: none;
   z-index: -9; /* One level above the background */
+}
+
+/* Random Death Overlay */
+.random-death-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.random-death-message {
+  background: #8B0000;
+  border: 3px solid #FF0000;
+  border-radius: 8px;
+  padding: 30px;
+  text-align: center;
+  max-width: 80%;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+  animation: pulse 2s infinite;
+}
+
+.random-death-message h2 {
+  color: white;
+  font-size: 28px;
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+}
+
+.random-death-message button {
+  background: #222;
+  color: white;
+  border: 2px solid white;
+  padding: 10px 20px;
+  font-size: 18px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+}
+
+.random-death-message button:hover {
+  background: #FF0000;
+  transform: scale(1.05);
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 } 
