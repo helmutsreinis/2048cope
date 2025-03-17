@@ -4,6 +4,8 @@ import Grid2D from './Grid2D';
 import ScoreDisplay from './ScoreDisplay';
 import Controls from './Controls';
 import ChatStream from './ChatStream';
+import DifficultySelector, { Difficulty, DIFFICULTIES } from './DifficultySelector';
+import SkillTree, { SkillTreeState, getInitialSkillTreeState } from './SkillTree';
 import useSwipeGesture from '../hooks/useSwipeGesture';
 import { getRandomMessage } from '../utils/chatMessages';
 import { getBackgroundForScore, preloadBackgroundImages, generateFallbackBackground } from '../utils/backgroundManager';
@@ -38,6 +40,16 @@ const Game2D = () => {
   const prevBackgroundRef = useRef(null);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   
+  // Difficulty and skill tree states
+  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty | null>(null);
+  const [showDifficultySelector, setShowDifficultySelector] = useState(true);
+  const [showSkillTree, setShowSkillTree] = useState(false);
+  const [skillTreeState, setSkillTreeState] = useState<SkillTreeState>(getInitialSkillTreeState());
+  const [skillPoints, setSkillPoints] = useState(0);
+  
+  // Track score accumulated since last skill point
+  const [scoreTowardsSkillPoint, setScoreTowardsSkillPoint] = useState(0);
+  
   // Add a new chat message - defined early so it can be used by other functions
   const addChatMessage = useCallback((message) => {
     setChatMessages(prev => {
@@ -52,6 +64,116 @@ const Game2D = () => {
       return newMessages;
     });
   }, []);
+  
+  // Handle difficulty selection
+  const handleSelectDifficulty = (difficulty: Difficulty) => {
+    setSelectedDifficulty(difficulty);
+    addChatMessage(`Selected difficulty: ${difficulty.name} - ${difficulty.description}`);
+  };
+  
+  // Spend skill points
+  const handleSpendSkillPoints = (points) => {
+    setSkillPoints(prev => Math.max(0, prev - points));
+  };
+
+  // Update skill tree state
+  const handleUpdateSkillTree = (newState) => {
+    setSkillTreeState(newState);
+    
+    // Save skill tree to localStorage
+    localStorage.setItem('skillTreeState', JSON.stringify(newState));
+  };
+
+  // Die from skill learning
+  const handleSkillDeathEvent = (message) => {
+    setRandomDeathMessage(message);
+    setShowRandomDeath(true);
+    setGameState('over');
+    addChatMessage(`💀 ${message}`);
+  };
+  
+  // Initialize a new game
+  const initGame = useCallback(() => {
+    console.log("Creating new game");
+    
+    // Create empty board
+    const emptyBoard = Array(4).fill().map(() => 
+      Array(4).fill().map(() => ({ value: 0, mergedFrom: null, isNew: false }))
+    );
+    
+    // Add two initial tiles
+    const boardWithTiles = addRandomTile(addRandomTile(emptyBoard));
+    
+    setBoard(boardWithTiles);
+    setScore(0);
+    setGameState('ready');
+    setChatMessages([]); // Clear chat messages
+    setShowRandomDeath(false); // Reset random death state
+    addChatMessage("🔥 New meatwave starting! Let's cook! 🧑‍🍳");
+    if (selectedDifficulty) {
+      addChatMessage(`Difficulty: ${selectedDifficulty.name} - ${Math.round(calculateActualDeathRate() * 100)}% death chance per merge`);
+    }
+    updateBackground(0); // Reset background for new game
+    setScoreTowardsSkillPoint(0); // Reset progress towards skill point
+  }, [addChatMessage, addRandomTile, updateBackground, selectedDifficulty, calculateActualDeathRate]);
+  
+  // Start game with selected difficulty
+  const startGame = useCallback(() => {
+    if (!selectedDifficulty) {
+      addChatMessage("Please select a difficulty level first!");
+      return;
+    }
+    
+    setShowDifficultySelector(false);
+    initGame();
+  }, [selectedDifficulty, addChatMessage, initGame]);
+  
+  // Calculate the actual death rate based on skills
+  const calculateActualDeathRate = useCallback(() => {
+    if (!selectedDifficulty) return 0;
+    
+    // Base death rate from difficulty
+    let deathRate = selectedDifficulty.deathRate;
+    
+    // Apply death rate modifiers from skills
+    const denySkill = skillTreeState.skills.find(s => s.id === 'deny');
+    if (denySkill && denySkill.currentLevel > 0 && denySkill.deathRateModifier) {
+      deathRate *= denySkill.deathRateModifier(denySkill.currentLevel);
+    }
+    
+    return deathRate;
+  }, [selectedDifficulty, skillTreeState.skills]);
+  
+  // Calculate score multiplier based on skills
+  const calculateScoreMultiplier = useCallback(() => {
+    let multiplier = 1;
+    
+    // Apply score multipliers from skills
+    skillTreeState.skills.forEach(skill => {
+      if (skill.currentLevel > 0 && skill.scoreMultiplier) {
+        multiplier *= skill.scoreMultiplier(skill.currentLevel);
+      }
+    });
+    
+    return multiplier;
+  }, [skillTreeState.skills]);
+  
+  // Check for bonus score chance
+  const checkBonusScore = useCallback(() => {
+    let bonus = 1;
+    
+    // Check for bonus score chance from Swazitruck skill
+    const swaziSkill = skillTreeState.skills.find(s => s.id === 'swazi');
+    if (swaziSkill && swaziSkill.currentLevel > 0 && swaziSkill.bonusScoreChance) {
+      const chance = swaziSkill.bonusScoreChance(swaziSkill.currentLevel);
+      if (Math.random() < chance) {
+        bonus = swaziSkill.scoreBonus ? swaziSkill.scoreBonus(swaziSkill.currentLevel) : 1;
+        addChatMessage(`🎉 BONUS! Swazitruck activated, score multiplied by ${bonus}x!`);
+      }
+    }
+    
+    return bonus;
+  }, [skillTreeState.skills, addChatMessage]);
   
   // Preload background images on component mount
   useEffect(() => {
@@ -141,9 +263,11 @@ const Game2D = () => {
     return true;
   }, []);
   
-  // Check for random death on each merge (1% chance)
+  // Check for random death on each merge based on difficulty and skills
   const checkRandomDeath = useCallback(() => {
-    if (Math.random() < 0.01) { // 1% chance
+    const deathRate = calculateActualDeathRate();
+    
+    if (Math.random() < deathRate) {
       const randomMessage = RANDOM_DEATH_MESSAGES[Math.floor(Math.random() * RANDOM_DEATH_MESSAGES.length)];
       setRandomDeathMessage(randomMessage);
       setShowRandomDeath(true);
@@ -152,8 +276,8 @@ const Game2D = () => {
       return true;
     }
     return false;
-  }, [addChatMessage]);
-
+  }, [addChatMessage, calculateActualDeathRate]);
+  
   // Move the tiles in the specified direction
   const move = useCallback((direction) => {
     if (gameState !== 'ready') {
@@ -182,9 +306,32 @@ const Game2D = () => {
           }
           if (result[i].mergedFrom) {
             const mergedValue = result[i].value;
-            newScore += mergedValue;
+            const baseScore = mergedValue;
+            
+            // Apply score multiplier from skills
+            const scoreMultiplier = calculateScoreMultiplier();
+            
+            // Check for bonus score chance
+            const bonusMultiplier = checkBonusScore();
+            
+            // Calculate total score for this merge
+            const totalScore = Math.round(baseScore * scoreMultiplier * bonusMultiplier);
+            
+            newScore += totalScore;
             moved = true;
             mergedTiles.add(mergedValue);
+            
+            // Track progress towards skill points (using base score)
+            setScoreTowardsSkillPoint(prev => {
+              const newTotal = prev + baseScore;
+              if (newTotal >= 100) {
+                // Award a skill point
+                setSkillPoints(p => p + 1);
+                addChatMessage("🧠 You've earned a skill point! Open the Skill Tree to use it.");
+                return newTotal % 100; // Remainder towards next point
+              }
+              return newTotal;
+            });
           }
         }
       }
@@ -200,9 +347,32 @@ const Game2D = () => {
           }
           if (result[i].mergedFrom) {
             const mergedValue = result[i].value;
-            newScore += mergedValue;
+            const baseScore = mergedValue;
+            
+            // Apply score multiplier from skills
+            const scoreMultiplier = calculateScoreMultiplier();
+            
+            // Check for bonus score chance
+            const bonusMultiplier = checkBonusScore();
+            
+            // Calculate total score for this merge
+            const totalScore = Math.round(baseScore * scoreMultiplier * bonusMultiplier);
+            
+            newScore += totalScore;
             moved = true;
             mergedTiles.add(mergedValue);
+            
+            // Track progress towards skill points (using base score)
+            setScoreTowardsSkillPoint(prev => {
+              const newTotal = prev + baseScore;
+              if (newTotal >= 100) {
+                // Award a skill point
+                setSkillPoints(p => p + 1);
+                addChatMessage("🧠 You've earned a skill point! Open the Skill Tree to use it.");
+                return newTotal % 100; // Remainder towards next point
+              }
+              return newTotal;
+            });
           }
         }
       }
@@ -218,9 +388,32 @@ const Game2D = () => {
           }
           if (result[j].mergedFrom) {
             const mergedValue = result[j].value;
-            newScore += mergedValue;
+            const baseScore = mergedValue;
+            
+            // Apply score multiplier from skills
+            const scoreMultiplier = calculateScoreMultiplier();
+            
+            // Check for bonus score chance
+            const bonusMultiplier = checkBonusScore();
+            
+            // Calculate total score for this merge
+            const totalScore = Math.round(baseScore * scoreMultiplier * bonusMultiplier);
+            
+            newScore += totalScore;
             moved = true;
             mergedTiles.add(mergedValue);
+            
+            // Track progress towards skill points (using base score)
+            setScoreTowardsSkillPoint(prev => {
+              const newTotal = prev + baseScore;
+              if (newTotal >= 100) {
+                // Award a skill point
+                setSkillPoints(p => p + 1);
+                addChatMessage("🧠 You've earned a skill point! Open the Skill Tree to use it.");
+                return newTotal % 100; // Remainder towards next point
+              }
+              return newTotal;
+            });
           }
         }
       }
@@ -236,9 +429,32 @@ const Game2D = () => {
           }
           if (result[j].mergedFrom) {
             const mergedValue = result[j].value;
-            newScore += mergedValue;
+            const baseScore = mergedValue;
+            
+            // Apply score multiplier from skills
+            const scoreMultiplier = calculateScoreMultiplier();
+            
+            // Check for bonus score chance
+            const bonusMultiplier = checkBonusScore();
+            
+            // Calculate total score for this merge
+            const totalScore = Math.round(baseScore * scoreMultiplier * bonusMultiplier);
+            
+            newScore += totalScore;
             moved = true;
             mergedTiles.add(mergedValue);
+            
+            // Track progress towards skill points (using base score)
+            setScoreTowardsSkillPoint(prev => {
+              const newTotal = prev + baseScore;
+              if (newTotal >= 100) {
+                // Award a skill point
+                setSkillPoints(p => p + 1);
+                addChatMessage("🧠 You've earned a skill point! Open the Skill Tree to use it.");
+                return newTotal % 100; // Remainder towards next point
+              }
+              return newTotal;
+            });
           }
         }
       }
@@ -363,37 +579,41 @@ const Game2D = () => {
     return () => clearInterval(chatClearInterval);
   }, []);
   
-  // Initialize a new game
-  const initGame = useCallback(() => {
-    console.log("Creating new game");
-    
-    // Create empty board
-    const emptyBoard = Array(4).fill().map(() => 
-      Array(4).fill().map(() => ({ value: 0, mergedFrom: null, isNew: false }))
-    );
-    
-    // Add two initial tiles
-    const boardWithTiles = addRandomTile(addRandomTile(emptyBoard));
-    
-    setBoard(boardWithTiles);
-    setScore(0);
-    setGameState('ready');
-    setChatMessages([]); // Clear chat messages
-    setShowRandomDeath(false); // Reset random death state
-    addChatMessage("🔥 New meatwave starting! Let's cook! 🧑‍🍳");
-    updateBackground(0); // Reset background for new game
-  }, [addChatMessage, addRandomTile, updateBackground]);
-  
   // Initialize the game on mount
   useEffect(() => {
     console.log("Initializing the game");
-    initGame();
     
     // Load best score from localStorage
     const savedBestScore = localStorage.getItem('bestScore');
     if (savedBestScore) {
       setBestScore(parseInt(savedBestScore, 10));
     }
+    
+    // Load skill tree from localStorage if available
+    const savedSkillTree = localStorage.getItem('skillTreeState');
+    if (savedSkillTree) {
+      try {
+        const parsedSkillTree = JSON.parse(savedSkillTree);
+        setSkillTreeState(parsedSkillTree);
+      } catch (e) {
+        console.error("Failed to parse saved skill tree:", e);
+        setSkillTreeState(getInitialSkillTreeState());
+      }
+    }
+    
+    // Check if difficulty was previously selected
+    const savedDifficulty = localStorage.getItem('selectedDifficulty');
+    if (savedDifficulty) {
+      try {
+        const parsedDifficulty = JSON.parse(savedDifficulty);
+        setSelectedDifficulty(parsedDifficulty);
+        setShowDifficultySelector(false); // Skip difficulty selector
+        initGame(); // Start game with saved difficulty
+      } catch (e) {
+        console.error("Failed to parse saved difficulty:", e);
+      }
+    }
+    
   }, [initGame]);
   
   // Save best score to localStorage when it changes
@@ -402,6 +622,13 @@ const Game2D = () => {
       localStorage.setItem('bestScore', bestScore.toString());
     }
   }, [bestScore]);
+
+  // Save selected difficulty to localStorage
+  useEffect(() => {
+    if (selectedDifficulty) {
+      localStorage.setItem('selectedDifficulty', JSON.stringify(selectedDifficulty));
+    }
+  }, [selectedDifficulty]);
 
   // Get background style based on current background
   const getBackgroundStyle = () => {
@@ -466,41 +693,115 @@ const Game2D = () => {
         </div>
       )}
       
-      <div className="game-header">
-        <div className="title">
-          <h1>SVO 3-Day Simulator</h1>
-        </div>
-        <div className="scores">
-          <ScoreDisplay score={score} bestScore={bestScore} />
-        </div>
-      </div>
+      {/* Difficulty selector */}
+      <DifficultySelector 
+        onSelect={handleSelectDifficulty}
+        selectedDifficulty={selectedDifficulty}
+        isVisible={showDifficultySelector}
+      />
       
-      <div className="game-controls">
-        <button className="new-game-btn" onClick={initGame}>New Meatwave</button>
-        <div className="game-state-indicator">
-          Game State: {gameState}
-        </div>
-        
-        {gameState === 'over' && !showRandomDeath && (
-          <div className="game-over">
-            <h2>Shift Over!</h2>
-            <button onClick={initGame}>New Meatwave</button>
+      {/* Skill tree */}
+      <SkillTree
+        skillPoints={skillPoints}
+        onSpendPoints={handleSpendSkillPoints}
+        skillTreeState={skillTreeState}
+        onUpdateSkillTree={handleUpdateSkillTree}
+        isVisible={showSkillTree}
+        onClose={() => setShowSkillTree(false)}
+        onDeath={handleSkillDeathEvent}
+      />
+      
+      {/* Only show game UI if difficulty is selected */}
+      {!showDifficultySelector && (
+        <>
+          <div className="game-header">
+            <div className="title">
+              <h1>SVO 3-Day Simulator</h1>
+            </div>
+            <div className="scores">
+              <ScoreDisplay score={score} bestScore={bestScore} />
+              
+              {/* Skill points display */}
+              <div className="skill-points-display">
+                <div className="skill-points-count">
+                  <span className="skill-icon">🧠</span>
+                  <span>{skillPoints}</span>
+                </div>
+                <div className="skill-progress-container">
+                  <div 
+                    className="skill-progress-bar" 
+                    style={{ width: `${(scoreTowardsSkillPoint / 100) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
-      
-      <div className="game-board-2d">
-        <Grid2D 
-          board={board} 
-          setGameState={setGameState}
-        />
-      </div>
-      
-      <div className="game-instructions">
-        <p>Use arrow keys or swipe to move the tiles. When two tiles with the same number touch, they merge into the next shift!</p>
-      </div>
+          
+          <div className="game-controls">
+            <div className="control-buttons">
+              <button className="new-game-btn" onClick={initGame}>New Meatwave</button>
+              <button 
+                className="skill-tree-btn" 
+                onClick={() => setShowSkillTree(true)}
+                disabled={gameState === 'over'}
+              >
+                Skill Tree {skillPoints > 0 ? `(${skillPoints})` : ''}
+              </button>
+              <button 
+                className="change-difficulty-btn" 
+                onClick={() => setShowDifficultySelector(true)}
+              >
+                Change Difficulty
+              </button>
+            </div>
+            
+            <div className="game-state-indicator">
+              <div className="difficulty-badge">
+                {selectedDifficulty && (
+                  <>
+                    <span className="difficulty-name">{selectedDifficulty.name}</span>
+                    <span className="death-chance">
+                      Death chance: {Math.round(calculateActualDeathRate() * 100)}%
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+            
+            {gameState === 'over' && !showRandomDeath && (
+              <div className="game-over">
+                <h2>Shift Over!</h2>
+                <button onClick={initGame}>New Meatwave</button>
+              </div>
+            )}
+          </div>
+          
+          <div className="game-board-2d">
+            <Grid2D 
+              board={board} 
+              setGameState={setGameState}
+            />
+          </div>
+          
+          <div className="game-instructions">
+            <p>Use arrow keys or swipe to move the tiles. When two tiles with the same number touch, they merge into the next shift!</p>
+          </div>
 
-      <ChatStream messages={chatMessages} />
+          <ChatStream messages={chatMessages} />
+        </>
+      )}
+      
+      {/* Start game button for difficulty selector */}
+      {showDifficultySelector && selectedDifficulty && (
+        <div className="start-game-button-container">
+          <button 
+            className="start-game-button"
+            onClick={startGame}
+          >
+            Start Game
+          </button>
+        </div>
+      )}
     </div>
   );
 };
