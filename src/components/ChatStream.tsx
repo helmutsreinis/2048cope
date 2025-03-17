@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import '../styles/ChatStream.css';
 
 interface ChatMessage {
@@ -13,6 +13,7 @@ interface ChatStreamProps {
 
 const ChatStream: React.FC<ChatStreamProps> = ({ messages }) => {
   const chatRef = useRef<HTMLDivElement>(null);
+  const [minimized, setMinimized] = useState(false);
 
   useEffect(() => {
     if (chatRef.current) {
@@ -20,22 +21,33 @@ const ChatStream: React.FC<ChatStreamProps> = ({ messages }) => {
     }
   }, [messages]);
 
+  const toggleMinimize = () => {
+    setMinimized(!minimized);
+  };
+
   return (
-    <div className="chat-stream" ref={chatRef}>
+    <div className={`chat-stream ${minimized ? 'minimized' : ''}`} ref={chatRef}>
       <div className="chat-header">
-        <h3>ruzzian cope stream.</h3>
-        <span className="chat-status">🔴 LIVE</span>
+        <h3>Kitchen Chat</h3>
+        <div className="chat-controls">
+          <span className="chat-status">🔴 LIVE</span>
+          <button className="minimize-btn" onClick={toggleMinimize}>
+            {minimized ? '↗' : '↘'}
+          </button>
+        </div>
       </div>
-      <div className="chat-messages">
-        {[...messages].reverse().map((msg) => (
-          <div key={msg.id} className="chat-message">
-            <span className="message-time">
-              {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
-            <span className="message-text">{msg.message}</span>
-          </div>
-        ))}
-      </div>
+      {!minimized && (
+        <div className="chat-messages">
+          {[...messages].reverse().map((msg) => (
+            <div key={msg.id} className="chat-message">
+              <span className="message-time">
+                {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+              <span className="message-text">{msg.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

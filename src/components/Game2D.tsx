@@ -35,6 +35,21 @@ const Game2D = () => {
   const [showRandomDeath, setShowRandomDeath] = useState(false);
   const prevBackgroundRef = useRef(null);
   
+  // Add a new chat message - defined early so it can be used by other functions
+  const addChatMessage = useCallback((message) => {
+    setChatMessages(prev => {
+      const newMessages = [
+        ...prev,
+        {
+          id: Date.now() + Math.random().toString(36).substring(2, 9), // Ensure unique ID
+          message,
+          timestamp: new Date()
+        }
+      ].slice(-10); // Keep only the last 10 messages
+      return newMessages;
+    });
+  }, []);
+  
   // Preload background images on component mount
   useEffect(() => {
     preloadBackgroundImages();
@@ -57,67 +72,12 @@ const Game2D = () => {
     
     setCurrentBackground(background);
     prevBackgroundRef.current = background;
-  }, []);
+  }, [addChatMessage]);
   
   // Log game state changes for debugging
   useEffect(() => {
     console.log("Game state changed to:", gameState);
   }, [gameState]);
-  
-  // Add a new chat message - moved up so it's defined before being used
-  const addChatMessage = useCallback((message) => {
-    setChatMessages(prev => {
-      const newMessages = [
-        ...prev,
-        {
-          id: Date.now() + Math.random().toString(36).substring(2, 9), // Ensure unique ID
-          message,
-          timestamp: new Date()
-        }
-      ].slice(-10); // Keep only the last 10 messages
-      return newMessages;
-    });
-  }, []);
-  
-  // Initialize the game
-  useEffect(() => {
-    console.log("Initializing the game");
-    initGame();
-    
-    // Load best score from localStorage
-    const savedBestScore = localStorage.getItem('bestScore');
-    if (savedBestScore) {
-      setBestScore(parseInt(savedBestScore, 10));
-    }
-  }, []);
-  
-  // Save best score to localStorage when it changes
-  useEffect(() => {
-    if (bestScore > 0) {
-      localStorage.setItem('bestScore', bestScore.toString());
-    }
-  }, [bestScore]);
-  
-  // Initialize a new game
-  const initGame = useCallback(() => {
-    console.log("Creating new game");
-    
-    // Create empty board
-    const emptyBoard = Array(4).fill().map(() => 
-      Array(4).fill().map(() => ({ value: 0, mergedFrom: null, isNew: false }))
-    );
-    
-    // Add two initial tiles
-    const boardWithTiles = addRandomTile(addRandomTile(emptyBoard));
-    
-    setBoard(boardWithTiles);
-    setScore(0);
-    setGameState('ready');
-    setChatMessages([]); // Clear chat messages
-    setShowRandomDeath(false); // Reset random death state
-    addChatMessage("🔥 New meatwave starting! Let's cook! 🧑‍🍳");
-    updateBackground(0); // Reset background for new game
-  }, [addChatMessage, updateBackground]);
   
   // Add a random tile to the board (2 or 4)
   const addRandomTile = useCallback((currentBoard) => {
@@ -178,36 +138,9 @@ const Game2D = () => {
     return true;
   }, []);
   
-  // Process keyboard input
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (gameState !== 'ready') return;
-      
-      switch (e.key) {
-        case 'ArrowUp':
-          move('up');
-          break;
-        case 'ArrowDown':
-          move('down');
-          break;
-        case 'ArrowLeft':
-          move('left');
-          break;
-        case 'ArrowRight':
-          move('right');
-          break;
-        default:
-          break;
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, move]);
-  
   // Check for random death on each merge (1% chance)
-  const checkRandomDeath = () => {
-    if (Math.random() < 0.01) { // 1% chance
+  const checkRandomDeath = useCallback(() => {
+    if (Math.random() < 0.005) { // 1% chance
       const randomMessage = RANDOM_DEATH_MESSAGES[Math.floor(Math.random() * RANDOM_DEATH_MESSAGES.length)];
       setRandomDeathMessage(randomMessage);
       setShowRandomDeath(true);
@@ -216,7 +149,7 @@ const Game2D = () => {
       return true;
     }
     return false;
-  };
+  }, [addChatMessage]);
 
   // Move the tiles in the specified direction
   const move = useCallback((direction) => {
@@ -370,6 +303,82 @@ const Game2D = () => {
       setGameState('ready');
     }
   }, [board, gameState, score, bestScore, addRandomTile, addChatMessage, updateBackground, checkRandomDeath, isGameOver]);
+  
+  // Process keyboard input
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (gameState !== 'ready') return;
+      
+      switch (e.key) {
+        case 'ArrowUp':
+          move('up');
+          break;
+        case 'ArrowDown':
+          move('down');
+          break;
+        case 'ArrowLeft':
+          move('left');
+          break;
+        case 'ArrowRight':
+          move('right');
+          break;
+        default:
+          break;
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [gameState, move]);
+  
+  // Clear chat messages every 10 seconds
+  useEffect(() => {
+    const chatClearInterval = setInterval(() => {
+      setChatMessages([]);
+    }, 10000); // 10 seconds
+    
+    return () => clearInterval(chatClearInterval);
+  }, []);
+  
+  // Initialize a new game
+  const initGame = useCallback(() => {
+    console.log("Creating new game");
+    
+    // Create empty board
+    const emptyBoard = Array(4).fill().map(() => 
+      Array(4).fill().map(() => ({ value: 0, mergedFrom: null, isNew: false }))
+    );
+    
+    // Add two initial tiles
+    const boardWithTiles = addRandomTile(addRandomTile(emptyBoard));
+    
+    setBoard(boardWithTiles);
+    setScore(0);
+    setGameState('ready');
+    setChatMessages([]); // Clear chat messages
+    setShowRandomDeath(false); // Reset random death state
+    addChatMessage("🔥 New meatwave starting! Let's cook! 🧑‍🍳");
+    updateBackground(0); // Reset background for new game
+  }, [addChatMessage, addRandomTile, updateBackground]);
+  
+  // Initialize the game on mount
+  useEffect(() => {
+    console.log("Initializing the game");
+    initGame();
+    
+    // Load best score from localStorage
+    const savedBestScore = localStorage.getItem('bestScore');
+    if (savedBestScore) {
+      setBestScore(parseInt(savedBestScore, 10));
+    }
+  }, [initGame]);
+  
+  // Save best score to localStorage when it changes
+  useEffect(() => {
+    if (bestScore > 0) {
+      localStorage.setItem('bestScore', bestScore.toString());
+    }
+  }, [bestScore]);
 
   // Get background style based on current background
   const getBackgroundStyle = () => {

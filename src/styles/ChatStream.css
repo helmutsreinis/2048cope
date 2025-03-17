@@ -12,6 +12,12 @@
   overflow: hidden;
   font-family: 'Inter', sans-serif;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: height 0.3s ease-in-out;
+}
+
+.chat-stream.minimized {
+  height: 50px;
+  overflow: hidden;
 }
 
 .chat-header {
@@ -29,11 +35,37 @@
   font-weight: 600;
 }
 
+.chat-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .chat-status {
   font-size: 12px;
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.minimize-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  padding: 0;
+  outline: none;
+}
+
+.minimize-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .chat-messages {
